@@ -285,24 +285,6 @@ app.MapGet("/api/integration/status", () => Results.Ok(new
 app.MapFallbackToFile("index.html");
 app.Run();
 
-static ProductEntity Seed(
-    string sku, string title, long current, long cost, long min, long max, long? competitor,
-    PricingStrategy strategy, DateTimeOffset now) => new()
-{
-    Id = Guid.NewGuid(),
-    SellerSku = sku,
-    Title = title,
-    CurrentPriceToman = current,
-    CostPriceToman = cost,
-    MinPriceToman = min,
-    MaxPriceToman = max,
-    CompetitorPriceToman = competitor,
-    Strategy = strategy,
-    Mode = PricingMode.ManualApproval,
-    Enabled = true,
-    UpdatedAtUtc = now
-};
-
 static List<List<string>> ParseCsv(string input)
 {
     var rows = new List<List<string>>();
