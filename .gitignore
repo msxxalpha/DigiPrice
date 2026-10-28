@@ -22,8 +22,10 @@ digikala_auth_response.json
 .DS_Store
 Thumbs.db
 
-# Local application data (never commit seller/product database files)
+# Local application data and database exports (never commit seller/product data)
 **/App_Data/
 *.db
 *.db-shm
 *.db-wal
+*.bak
+*.bacpac
