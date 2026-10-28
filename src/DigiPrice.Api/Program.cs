@@ -16,19 +16,19 @@ builder.Services.AddDbContext<DigiPriceDbContext>(options => options.UseSqlServe
 
 var app = builder.Build();
 
-// Creates the initial schema in the already-provisioned SQL Server database. Schema changes require reviewed EF Core migrations.
+// Schema is provisioned explicitly by the versioned SQL script. Never auto-create or reset a seller database.
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<DigiPriceDbContext>();
-    await db.Database.EnsureCreatedAsync();
-    if (!await db.Products.AnyAsync())
+    if (!await db.Database.CanConnectAsync())
+        throw new InvalidOperationException("اتصال به SQL Server برقرار نشد؛ ConnectionStrings__DigiPrice را بررسی کنید.");
+    try
     {
-        var now = DateTimeOffset.UtcNow;
-        db.Products.AddRange(
-            Seed("DP-1001", "هدفون بی‌سیم نمونه", 1_250_000, 820_000, 1_050_000, 1_490_000, 1_230_000, PricingStrategy.UndercutCompetitor, now),
-            Seed("DP-1002", "ماوس بی‌سیم نمونه", 680_000, 410_000, 590_000, 790_000, 650_000, PricingStrategy.Defensive, now),
-            Seed("DP-1003", "پایه نگهدارنده نمونه", 390_000, 220_000, 330_000, 450_000, null, PricingStrategy.FixedPrice, now));
-        await db.SaveChangesAsync();
+        await db.Products.AsNoTracking().Select(p => p.Id).Take(1).ToListAsync();
+    }
+    catch (Exception ex)
+    {
+        throw new InvalidOperationException("جدول‌های DigiPrice نصب نشده‌اند؛ اسکریپت database/001-initial-schema.sql را در دیتابیس DigiPrice اجرا کنید.", ex);
     }
 }
 
@@ -118,6 +118,129 @@ app.MapPut("/api/products/{id:guid}/strategy", async Task<IResult> (
     });
 });
 
+app.MapPost("/api/products/import", async Task<IResult> (HttpRequest request, DigiPriceDbContext db) =>
+{
+    if (request.ContentLength is > 5_000_000)
+        return Results.BadRequest(new { error = "حجم فایل نباید بیشتر از ۵ مگابایت باشد." });
+
+    using var reader = new StreamReader(request.Body);
+    var csv = await reader.ReadToEndAsync();
+    if (string.IsNullOrWhiteSpace(csv))
+        return Results.BadRequest(new { error = "فایل CSV خالی است." });
+
+    var rows = ParseCsv(csv);
+    if (rows.Count < 2)
+        return Results.BadRequest(new { error = "فایل باید شامل سطر عنوان ستون‌ها و حداقل یک کالا باشد." });
+
+    var headers = rows[0].Select((value, index) => new { Key = value.Trim().TrimStart('\uFEFF'), Index = index })
+        .ToDictionary(x => x.Key, x => x.Index, StringComparer.OrdinalIgnoreCase);
+    var required = new[] { "sellerSku", "title", "currentPriceToman", "costPriceToman", "minPriceToman", "maxPriceToman", "competitorPriceToman", "strategy" };
+    var missing = required.Where(h => !headers.ContainsKey(h)).ToArray();
+    if (missing.Length > 0)
+        return Results.BadRequest(new { error = "ستون‌های لازم در فایل وجود ندارند.", missingColumns = missing });
+
+    string Value(IReadOnlyList<string> cells, string header) =>
+        headers[header] < cells.Count ? cells[headers[header]].Trim() : "";
+
+    var existing = await db.Products.ToListAsync();
+    var bySku = existing.ToDictionary(x => x.SellerSku, StringComparer.OrdinalIgnoreCase);
+    var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    var errors = new List<object>();
+    var created = 0;
+    var updated = 0;
+
+    for (var i = 1; i < rows.Count; i++)
+    {
+        var cells = rows[i];
+        if (cells.All(string.IsNullOrWhiteSpace)) continue;
+        var sku = Value(cells, "sellerSku");
+        if (string.IsNullOrWhiteSpace(sku) || !seen.Add(sku))
+        {
+            errors.Add(new { row = i + 1, sku, error = "شناسه کالا خالی یا در همین فایل تکراری است." });
+            continue;
+        }
+
+        bool TryLong(string name, out long number) =>
+            long.TryParse(Value(cells, name), System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out number);
+
+        if (!TryLong("currentPriceToman", out var current) ||
+            !TryLong("costPriceToman", out var cost) ||
+            !TryLong("minPriceToman", out var min) ||
+            !TryLong("maxPriceToman", out var max))
+        {
+            errors.Add(new { row = i + 1, sku, error = "قیمت‌ها باید عدد صحیح باشند و جداکننده هزارگان نداشته باشند." });
+            continue;
+        }
+
+        long? competitor = null;
+        var competitorText = Value(cells, "competitorPriceToman");
+        if (!string.IsNullOrWhiteSpace(competitorText))
+        {
+            if (!long.TryParse(competitorText, System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out var parsed) || parsed <= 0)
+            {
+                errors.Add(new { row = i + 1, sku, error = "قیمت رقیب باید خالی یا عدد صحیح مثبت باشد." });
+                continue;
+            }
+            competitor = parsed;
+        }
+
+        if (!Enum.TryParse<PricingStrategy>(Value(cells, "strategy"), true, out var strategy) ||
+            !Enum.IsDefined(strategy))
+        {
+            errors.Add(new { row = i + 1, sku, error = "مقدار strategy معتبر نیست." });
+            continue;
+        }
+
+        var title = Value(cells, "title");
+        var requestModel = new CreateProductRequest(sku, title, current, cost, min, max, competitor, strategy);
+        var validation = ValidateProduct(requestModel);
+        if (validation is not null)
+        {
+            errors.Add(new { row = i + 1, sku, error = validation });
+            continue;
+        }
+
+        if (bySku.TryGetValue(sku, out var product))
+        {
+            product.Title = title.Trim();
+            product.CurrentPriceToman = current;
+            product.CostPriceToman = cost;
+            product.MinPriceToman = min;
+            product.MaxPriceToman = max;
+            product.CompetitorPriceToman = competitor;
+            product.Strategy = strategy;
+            product.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            updated++;
+        }
+        else
+        {
+            product = new ProductEntity
+            {
+                Id = Guid.NewGuid(), SellerSku = sku.Trim(), Title = title.Trim(),
+                CurrentPriceToman = current, CostPriceToman = cost, MinPriceToman = min,
+                MaxPriceToman = max, CompetitorPriceToman = competitor, Strategy = strategy,
+                Mode = PricingMode.ManualApproval, Enabled = false, UpdatedAtUtc = DateTimeOffset.UtcNow
+            };
+            db.Products.Add(product);
+            bySku[product.SellerSku] = product;
+            created++;
+        }
+    }
+
+    try
+    {
+        await db.SaveChangesAsync();
+    }
+    catch (DbUpdateException)
+    {
+        return Results.Conflict(new { error = "ذخیره‌سازی انجام نشد؛ فایل را بررسی کنید و دوباره تلاش کنید." });
+    }
+
+    return Results.Ok(new { created, updated, rejected = errors.Count, errors, livePriceWritesEnabled = false });
+});
+
 app.MapPost("/api/pricing/preview", (PricingPreviewRequest request, PricingEngine engine) =>
 {
     try
@@ -160,6 +283,47 @@ static ProductEntity Seed(
     Enabled = true,
     UpdatedAtUtc = now
 };
+
+static List<List<string>> ParseCsv(string input)
+{
+    var rows = new List<List<string>>();
+    var row = new List<string>();
+    var cell = new System.Text.StringBuilder();
+    var quoted = false;
+
+    for (var i = 0; i < input.Length; i++)
+    {
+        var ch = input[i];
+        if (ch == '"')
+        {
+            if (quoted && i + 1 < input.Length && input[i + 1] == '"')
+            {
+                cell.Append('"');
+                i++;
+            }
+            else quoted = !quoted;
+        }
+        else if (ch == ',' && !quoted)
+        {
+            row.Add(cell.ToString()); cell.Clear();
+        }
+        else if ((ch == '\r' || ch == '\n') && !quoted)
+        {
+            if (ch == '\r' && i + 1 < input.Length && input[i + 1] == '\n') i++;
+            row.Add(cell.ToString()); cell.Clear();
+            rows.Add(row); row = new List<string>();
+        }
+        else cell.Append(ch);
+    }
+
+    if (quoted) throw new ArgumentException("ساختار CSV نامعتبر است؛ کوتیشن بسته‌نشده وجود دارد.");
+    if (cell.Length > 0 || row.Count > 0)
+    {
+        row.Add(cell.ToString());
+        rows.Add(row);
+    }
+    return rows;
+}
 
 static string? ValidateProduct(CreateProductRequest request)
 {
