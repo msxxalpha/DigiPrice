@@ -18,7 +18,7 @@ public sealed class DigiPriceDbContext(DbContextOptions<DigiPriceDbContext> opti
             table.HasCheckConstraint("CK_Products_Cost_NonNegative", "\"CostPriceToman\" >= 0");
         });
         product.HasKey(x => x.Id);
-        product.Property(x => x.SellerSku).HasMaxLength(100).IsRequired();
+        product.Property(x => x.SellerSku).HasMaxLength(100).UseCollation("NOCASE").IsRequired();
         product.Property(x => x.Title).HasMaxLength(250).IsRequired();
         product.HasIndex(x => x.SellerSku).IsUnique();
         product.Property(x => x.Strategy).HasConversion<string>().HasMaxLength(64);
