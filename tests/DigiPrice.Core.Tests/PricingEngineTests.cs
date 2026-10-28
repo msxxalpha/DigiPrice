@@ -1,4 +1,5 @@
 using DigiPrice.Core.Pricing;
+using Xunit;
 
 namespace DigiPrice.Core.Tests;
 
