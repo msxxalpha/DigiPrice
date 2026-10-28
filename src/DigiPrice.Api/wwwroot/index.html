@@ -11,7 +11,7 @@
     .top{background:#102b46;color:#fff;padding:22px max(20px,calc((100vw - 1180px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
     .brand{font-size:23px;font-weight:800;letter-spacing:.2px}.brand small{display:block;font-size:12px;color:#b9c9d8;font-weight:400;margin-top:6px}
     .pill{display:inline-flex;align-items:center;gap:8px;background:#fff3d8;color:#7a4b00;border-radius:30px;padding:8px 12px;font-size:12px;font-weight:700}
-    main{max-width:1180px;margin:28px auto;padding:0 18px 40px}.welcome{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+    main{max-width:1180px;margin:28px auto;padding:0 18px 40px}.welcome{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:20px}.welcome-actions{display:flex;gap:8px;flex-wrap:wrap}
     h1{font-size:24px;margin:0 0 8px}p.sub{margin:0;color:#66768a;line-height:1.8;font-size:14px}
     .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:20px 0}
     .card,.panel{background:#fff;border:1px solid #e0e7ef;border-radius:15px;padding:18px;box-shadow:0 3px 12px #102b4608}
@@ -38,9 +38,9 @@
 <main>
   <section class="welcome">
     <div><h1>نمای کلی قیمت‌گذاری</h1><p class="sub">قیمت‌ها را بررسی کنید، استراتژی را بسنجید و پیش از هر اقدام، اثر تغییر را ببینید.</p></div>
-    <button class="btn btn-primary" id="add-product">＋ افزودن کالای نمونه</button>
+    <div class="welcome-actions"><button class="btn btn-primary" id="add-product">＋ افزودن کالا</button><button class="btn btn-light" id="import-products">ورود گروهی CSV</button><a class="btn btn-light" href="/product-import-template.csv" download>دریافت قالب CSV</a><input id="csv-file" type="file" accept=".csv,text/csv" hidden></div>
   </section>
-  <div class="notice"><strong>حالت امن فعال است.</strong> این نسخه به دیجی‌کالا متصل نیست و قیمت واقعی را تغییر نمی‌دهد. داده‌های نمایش‌داده‌شده نمونه‌اند و با راه‌اندازی مجدد پاک می‌شوند. پیشنهادهای قیمت صرفاً برای ارزیابی موتور محاسبه هستند.</div>
+  <div class="notice"><strong>حالت امن فعال است.</strong> این نسخه به دیجی‌کالا متصل نیست و قیمت واقعی را تغییر نمی‌دهد. اطلاعات کالا در SQL Server ذخیره می‌شود. قیمت رقیب در این نسخه باید دستی وارد شود و پیشنهادها صرفاً برای بررسی هستند.</div>
   <section class="cards">
     <div class="card"><div class="metric-label">تعداد کالاها</div><div class="metric" id="metric-count">—</div><div class="metric-note">در کاتالوگ آزمایشی</div></div>
     <div class="card"><div class="metric-label">نیازمند بررسی قیمت</div><div class="metric" id="metric-review">—</div><div class="metric-note">قیمت رقیب یا محدودیت‌ها</div></div>
@@ -154,6 +154,21 @@
         await loadProducts();
       } catch(e) { document.getElementById("form-error").textContent=e.message; }
     });
+  });
+  document.getElementById("import-products").addEventListener("click", () => document.getElementById("csv-file").click());
+  document.getElementById("csv-file").addEventListener("change", async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5_000_000) { alert("حجم فایل نباید بیشتر از ۵ مگابایت باشد."); event.target.value = ""; return; }
+    try {
+      const response = await fetch("/api/products/import", {method:"POST",headers:{"Content-Type":"text/csv; charset=utf-8"},body:await file.text()});
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "ورود فایل ناموفق بود.");
+      const details = (result.errors || []).slice(0,10).map(x => "سطر "+x.row+" ("+x.sku+"): "+x.error).join("\\n");
+      alert("ورود CSV پایان یافت.\\nکالای جدید: "+result.created+"\\nبه‌روزرسانی‌شده: "+result.updated+"\\nردشده: "+result.rejected+(details ? "\\n\\nجزئیات (حداکثر ۱۰ مورد):\\n"+details : ""));
+      await loadProducts();
+    } catch (e) { alert(e.message); }
+    finally { event.target.value = ""; }
   });
   document.getElementById("close-modal").addEventListener("click", () => document.getElementById("modal").style.display="none");
   document.getElementById("modal").addEventListener("click", e => { if(e.target.id==="modal") e.currentTarget.style.display="none"; });
