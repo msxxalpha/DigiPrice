@@ -1,7 +1,6 @@
 using System.Text.Json.Serialization;
 using DigiPrice.Api.Data;
 using DigiPrice.Core.Pricing;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,26 +9,14 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddSingleton<PricingEngine>();
 
 var connectionString = builder.Configuration.GetConnectionString("DigiPrice")
-    ?? "Data Source=App_Data/digiprice.db";
-var sqlite = new SqliteConnectionStringBuilder(connectionString);
-if (!string.IsNullOrWhiteSpace(sqlite.DataSource) &&
-    !string.Equals(sqlite.DataSource, ":memory:", StringComparison.OrdinalIgnoreCase) &&
-    !sqlite.DataSource.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
-{
-    if (!Path.IsPathRooted(sqlite.DataSource))
-        sqlite.DataSource = Path.GetFullPath(sqlite.DataSource, builder.Environment.ContentRootPath);
-
-    var databaseDirectory = Path.GetDirectoryName(sqlite.DataSource);
-    if (!string.IsNullOrWhiteSpace(databaseDirectory))
-        Directory.CreateDirectory(databaseDirectory);
-}
-connectionString = sqlite.ToString();
-
-builder.Services.AddDbContext<DigiPriceDbContext>(options => options.UseSqlite(connectionString));
+    ?? "Server=localhost;Database=DigiPrice;Integrated Security=True;Encrypt=True;TrustServerCertificate=True";
+builder.Services.AddDbContext<DigiPriceDbContext>(options => options.UseSqlServer(
+    connectionString,
+    sql => sql.EnableRetryOnFailure(maxRetryCount: 3)));
 
 var app = builder.Build();
 
-// The initial release uses EnsureCreated; a versioned migration workflow will be introduced before schema evolution.
+// Creates the initial schema in the already-provisioned SQL Server database. Schema changes require reviewed EF Core migrations.
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<DigiPriceDbContext>();
@@ -54,7 +41,7 @@ app.MapGet("/api/health", (IConfiguration configuration) => Results.Ok(new
     product = "DigiPrice",
     environment = app.Environment.EnvironmentName,
     mode = "simulation-only",
-    storage = "sqlite",
+    storage = "sqlserver",
     liveDigikalaConnectionConfigured = false,
     livePriceWritesEnabled = false,
     timestampUtc = DateTimeOffset.UtcNow
