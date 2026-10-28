@@ -57,10 +57,10 @@ app.MapGet("/api/health", (IConfiguration configuration) => Results.Ok(new
 }));
 
 app.MapGet("/api/products", async (DigiPriceDbContext db) =>
-    Results.Ok(await db.Products.AsNoTracking()
-        .OrderBy(p => p.SellerSku)
-        .Select(p => p.ToModel())
-        .ToListAsync()));
+{
+    var products = await db.Products.AsNoTracking().OrderBy(p => p.SellerSku).ToListAsync();
+    return Results.Ok(products.Select(p => p.ToModel()).ToArray());
+});
 
 app.MapPost("/api/products", async (CreateProductRequest request, DigiPriceDbContext db) =>
 {
