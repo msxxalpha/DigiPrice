@@ -21,3 +21,9 @@ digikala_auth_response.json
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local application data (never commit seller/product database files)
+**/App_Data/
+*.db
+*.db-shm
+*.db-wal
