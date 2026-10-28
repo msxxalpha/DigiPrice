@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Net;
 using DigiPrice.Api.Data;
 using DigiPrice.Core.Pricing;
 using Microsoft.EntityFrameworkCore;
@@ -9,12 +10,26 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddSingleton<PricingEngine>();
 
 var connectionString = builder.Configuration.GetConnectionString("DigiPrice")
-    ?? "Server=localhost;Database=DigiPrice;Integrated Security=True;Encrypt=True;TrustServerCertificate=True";
+    ?? "Server=localhost;Database=DigiPrice;Integrated Security=True;Encrypt=True;TrustServerCertificate=False";
 builder.Services.AddDbContext<DigiPriceDbContext>(options => options.UseSqlServer(
     connectionString,
     sql => sql.EnableRetryOnFailure(maxRetryCount: 3)));
 
 var app = builder.Build();
+
+// The pilot is local-only by default. Do not enable remote access before adding authentication and network controls.
+app.Use(async (context, next) =>
+{
+    var allowRemote = app.Configuration.GetValue<bool>("Pilot:AllowRemoteAccess");
+    var remoteIp = context.Connection.RemoteIpAddress;
+    if (!allowRemote && remoteIp is not null && !IPAddress.IsLoopback(remoteIp))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new { error = "دسترسی نسخه آزمایشی فقط از همین رایانه مجاز است." });
+        return;
+    }
+    await next();
+});
 
 // Schema is provisioned explicitly by the versioned SQL script. Never auto-create or reset a seller database.
 await using (var scope = app.Services.CreateAsyncScope())
@@ -128,12 +143,16 @@ app.MapPost("/api/products/import", async Task<IResult> (HttpRequest request, Di
     if (string.IsNullOrWhiteSpace(csv))
         return Results.BadRequest(new { error = "فایل CSV خالی است." });
 
-    var rows = ParseCsv(csv);
+    List<List<string>> rows;
+    try { rows = ParseCsv(csv); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
     if (rows.Count < 2)
         return Results.BadRequest(new { error = "فایل باید شامل سطر عنوان ستون‌ها و حداقل یک کالا باشد." });
 
-    var headers = rows[0].Select((value, index) => new { Key = value.Trim().TrimStart('\uFEFF'), Index = index })
-        .ToDictionary(x => x.Key, x => x.Index, StringComparer.OrdinalIgnoreCase);
+    var headerPairs = rows[0].Select((value, index) => new { Key = value.Trim().TrimStart('\uFEFF'), Index = index }).ToArray();
+    if (headerPairs.GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
+        return Results.BadRequest(new { error = "نام ستون تکراری در سطر اول فایل وجود دارد." });
+    var headers = headerPairs.ToDictionary(x => x.Key, x => x.Index, StringComparer.OrdinalIgnoreCase);
     var required = new[] { "sellerSku", "title", "currentPriceToman", "costPriceToman", "minPriceToman", "maxPriceToman", "competitorPriceToman", "strategy" };
     var missing = required.Where(h => !headers.ContainsKey(h)).ToArray();
     if (missing.Length > 0)
