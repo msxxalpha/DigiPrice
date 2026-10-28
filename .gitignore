@@ -1,0 +1,23 @@
+# .NET
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+secrets.json
+*.pem
+*.pfx
+*.key
+validation_code.txt
+digikala_auth_response.json
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b46">
+  <title>DigiPrice | قیمت‌گذاری هوشمند</title>
+  <style>
+    :root{font-family:Tahoma,"Segoe UI",sans-serif;color:#182534;background:#f3f6fa;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}
+    .top{background:#102b46;color:#fff;padding:22px max(20px,calc((100vw - 1180px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .brand{font-size:23px;font-weight:800;letter-spacing:.2px}.brand small{display:block;font-size:12px;color:#b9c9d8;font-weight:400;margin-top:6px}
+    .pill{display:inline-flex;align-items:center;gap:8px;background:#fff3d8;color:#7a4b00;border-radius:30px;padding:8px 12px;font-size:12px;font-weight:700}
+    main{max-width:1180px;margin:28px auto;padding:0 18px 40px}.welcome{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+    h1{font-size:24px;margin:0 0 8px}p.sub{margin:0;color:#66768a;line-height:1.8;font-size:14px}
+    .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:20px 0}
+    .card,.panel{background:#fff;border:1px solid #e0e7ef;border-radius:15px;padding:18px;box-shadow:0 3px 12px #102b4608}
+    .metric-label{color:#64748b;font-size:13px}.metric{font-size:25px;font-weight:800;margin:12px 0 5px}.metric-note{font-size:12px;color:#8492a4}
+    .panel{padding:0;overflow:hidden}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid #e8edf3;flex-wrap:wrap}
+    h2{font-size:17px;margin:0}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:780px}th,td{text-align:right;padding:14px 16px;border-bottom:1px solid #edf1f5;font-size:13px}th{background:#f9fbfd;color:#607187;font-weight:700}tr:last-child td{border-bottom:0}
+    .muted{color:#718096}.price{font-weight:800;white-space:nowrap}.strategy{color:#38546f}.btn{border:0;border-radius:9px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px}
+    .btn-primary{background:#1769aa;color:#fff}.btn-primary:hover{background:#12578e}.btn-light{background:#edf3f8;color:#23425e}.btn:disabled{opacity:.55;cursor:wait}
+    .notice{background:#fff9e9;border:1px solid #f0dca8;border-radius:12px;padding:14px 16px;color:#654c15;font-size:13px;line-height:1.9;margin:16px 0 20px}
+    .status{font-size:12px;color:#64748b}.dot{display:inline-block;width:8px;height:8px;background:#c78b1b;border-radius:50%;margin-left:7px}
+    .modal-backdrop{position:fixed;inset:0;background:#0c1b2db0;display:none;align-items:center;justify-content:center;padding:18px;z-index:5}.modal{background:white;border-radius:16px;max-width:580px;width:100%;padding:22px;max-height:90vh;overflow:auto}
+    .modal h2{margin-bottom:16px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.field label{display:block;font-size:12px;color:#5b6b7e;margin-bottom:7px}.field input,.field select{width:100%;padding:11px;border:1px solid #d7e0e9;border-radius:8px;background:#fff}
+    .modal-actions{display:flex;gap:9px;margin-top:18px}.result{background:#f3f8fc;border:1px solid #dce9f3;border-radius:12px;padding:15px;margin-top:16px;line-height:1.9}.result strong{font-size:22px}.warning{color:#895c0b;font-size:12px;margin-top:8px}.error{color:#b42318;font-size:13px;margin-top:10px}.empty{padding:28px;text-align:center;color:#6b7b8d}
+    footer{color:#8290a1;text-align:center;font-size:12px;padding:22px}
+    @media(max-width:850px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.top{padding:18px}.metric{font-size:22px}}
+    @media(max-width:480px){.cards{grid-template-columns:1fr 1fr;gap:8px}.card{padding:13px}.metric{font-size:19px}.form-grid{grid-template-columns:1fr}h1{font-size:21px}.welcome{align-items:start}}
+  </style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">DigiPrice <small>سامانه هوشمند مدیریت قیمت فروشندگان</small></div>
+  <div class="pill"><span>●</span> نسخه آزمایشی · فقط شبیه‌سازی</div>
+</header>
+<main>
+  <section class="welcome">
+    <div><h1>نمای کلی قیمت‌گذاری</h1><p class="sub">قیمت‌ها را بررسی کنید، استراتژی را بسنجید و پیش از هر اقدام، اثر تغییر را ببینید.</p></div>
+    <button class="btn btn-primary" id="add-product">＋ افزودن کالای نمونه</button>
+  </section>
+  <div class="notice"><strong>حالت امن فعال است.</strong> این نسخه به دیجی‌کالا متصل نیست و قیمت واقعی را تغییر نمی‌دهد. داده‌های نمایش‌داده‌شده نمونه‌اند و با راه‌اندازی مجدد پاک می‌شوند. پیشنهادهای قیمت صرفاً برای ارزیابی موتور محاسبه هستند.</div>
+  <section class="cards">
+    <div class="card"><div class="metric-label">تعداد کالاها</div><div class="metric" id="metric-count">—</div><div class="metric-note">در کاتالوگ آزمایشی</div></div>
+    <div class="card"><div class="metric-label">نیازمند بررسی قیمت</div><div class="metric" id="metric-review">—</div><div class="metric-note">قیمت رقیب یا محدودیت‌ها</div></div>
+    <div class="card"><div class="metric-label">اتصال دیجی‌کالا</div><div class="metric" style="font-size:19px">متصل نیست</div><div class="metric-note">تا تأیید مسیر رسمی</div></div>
+    <div class="card"><div class="metric-label">تغییر قیمت واقعی</div><div class="metric" style="font-size:19px">غیرفعال</div><div class="metric-note">هیچ عملیات نوشتنی اجرا نمی‌شود</div></div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>کالاها و استراتژی قیمت‌گذاری</h2><button class="btn btn-light" id="refresh">به‌روزرسانی فهرست</button></div>
+    <div class="table-wrap"><table><thead><tr><th>کالا</th><th>قیمت فعلی</th><th>قیمت رقیب (نمونه)</th><th>کف قیمت</th><th>استراتژی</th><th>عملیات</th></tr></thead><tbody id="products"><tr><td colspan="6" class="empty">در حال دریافت اطلاعات…</td></tr></tbody></table></div>
+  </section>
+  <footer>DigiPrice · نسخه پایه · قیمت‌ها به تومان هستند · اتصال و اجرای زنده هنوز پیاده‌سازی نشده است.</footer>
+</main>
+<div class="modal-backdrop" id="modal">
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <h2 id="modal-title">پیش‌نمایش قیمت پیشنهادی</h2>
+    <div id="modal-body"></div>
+    <div class="modal-actions"><button class="btn btn-light" id="close-modal">بستن</button></div>
+  </section>
+</div>
+<script>
+  const fmt = n => n == null ? "نامشخص" : new Intl.NumberFormat("fa-IR").format(n) + " تومان";
+  const strategyNames = {
+    UndercutCompetitor:"رقابت محدود با رقیب",
+    MaximizePriceWithinLimits:"حرکت به سقف مجاز",
+    FixedPrice:"قیمت ثابت",
+    Defensive:"محافظه‌کار"
+  };
+  let products = [];
+  const tbody = document.getElementById("products");
+  async function api(url, options) {
+    const response = await fetch(url, {headers:{"Content-Type":"application/json"}, ...options});
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || "خطا در ارتباط با سرویس");
+    return body;
+  }
+  async function loadProducts() {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">در حال دریافت اطلاعات…</td></tr>';
+    try {
+      products = await api("/api/products");
+      renderProducts();
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">دریافت اطلاعات ناموفق بود: '+escapeHtml(e.message)+'</td></tr>';
+    }
+  }
+  function renderProducts() {
+    document.getElementById("metric-count").textContent = new Intl.NumberFormat("fa-IR").format(products.length);
+    document.getElementById("metric-review").textContent = new Intl.NumberFormat("fa-IR").format(products.filter(p => p.competitorPriceToman == null).length);
+    if (!products.length) { tbody.innerHTML='<tr><td colspan="6" class="empty">هنوز کالایی ثبت نشده است.</td></tr>'; return; }
+    tbody.innerHTML = products.map(p => '<tr>'+
+      '<td><strong>'+escapeHtml(p.title)+'</strong><div class="muted" style="margin-top:5px">'+escapeHtml(p.sellerSku)+'</div></td>'+
+      '<td class="price">'+fmt(p.currentPriceToman)+'</td>'+
+      '<td>'+fmt(p.competitorPriceToman)+'</td>'+
+      '<td>'+fmt(p.minPriceToman)+'</td>'+
+      '<td class="strategy">'+(strategyNames[p.strategy] || escapeHtml(p.strategy))+'</td>'+
+      '<td><button class="btn btn-primary" data-preview="'+p.id+'">شبیه‌سازی قیمت</button></td></tr>').join("");
+    tbody.querySelectorAll("[data-preview]").forEach(btn => btn.addEventListener("click", () => preview(btn.dataset.preview)));
+  }
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+  function openModal(html) {
+    document.getElementById("modal-body").innerHTML = html;
+    document.getElementById("modal").style.display = "flex";
+  }
+  async function preview(id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    openModal('<div class="form-grid">'+
+      field("قیمت رقیب (تومان)","competitor",p.competitorPriceToman ?? "")+
+      field("فاصله از رقیب (تومان)","step","1000")+
+      field("حداکثر تغییر در هر نوبت (%)","change","5")+
+      '<div class="field"><label for="strategy">استراتژی</label><select id="strategy">'+Object.entries(strategyNames).map(([v,n])=>'<option value="'+v+'" '+(v===p.strategy?'selected':'')+'>'+n+'</option>').join("")+'</select></div></div>'+
+      '<div class="modal-actions"><button class="btn btn-primary" id="calculate">محاسبه پیشنهاد</button></div><div id="preview-result"></div>');
+    document.getElementById("calculate").addEventListener("click", async () => {
+      const btn = document.getElementById("calculate"); btn.disabled = true;
+      try {
+        const competitorText = document.getElementById("competitor").value.trim();
+        const result = await api("/api/pricing/preview", {method:"POST",body:JSON.stringify({
+          currentPriceToman:p.currentPriceToman,costPriceToman:p.costPriceToman,
+          competitorPriceToman:competitorText === "" ? null : Number(competitorText),
+          minPriceToman:p.minPriceToman,maxPriceToman:p.maxPriceToman,
+          undercutAmountToman:Number(document.getElementById("step").value),
+          maxChangePercent:Number(document.getElementById("change").value),
+          strategy:document.getElementById("strategy").value
+        })});
+        document.getElementById("preview-result").innerHTML='<div class="result"><div>قیمت پیشنهادی (صرفاً شبیه‌سازی)</div><strong>'+fmt(result.suggestedPriceToman)+'</strong><div>حاشیه سود ناخالص تخمینی: '+new Intl.NumberFormat("fa-IR",{maximumFractionDigits:2}).format(result.estimatedGrossMarginPercent)+'٪</div><div>'+escapeHtml(result.explanation)+'</div><div class="warning">'+(result.warnings.length ? result.warnings.map(escapeHtml).join("<br>") : "هشدار خاصی ثبت نشد.")+'</div><div class="warning">این پیشنهاد تأیید انسانی می‌خواهد و به دیجی‌کالا ارسال نمی‌شود.</div></div>';
+      } catch(e) {
+        document.getElementById("preview-result").innerHTML='<div class="error">'+escapeHtml(e.message)+'</div>';
+      } finally { btn.disabled = false; }
+    });
+  }
+  function field(label,id,value) { return '<div class="field"><label for="'+id+'">'+label+'</label><input id="'+id+'" type="number" min="0" value="'+escapeHtml(value)+'"></div>'; }
+  document.getElementById("add-product").addEventListener("click", () => {
+    openModal('<div class="form-grid">'+
+      field("شناسه کالا","sku","DP-"+Math.floor(1000+Math.random()*9000))+
+      '<div class="field"><label for="title">عنوان کالا</label><input id="title" value="" maxlength="250"></div>'+
+      field("قیمت فعلی (تومان)","current","500000")+
+      field("بهای تمام‌شده (تومان)","cost","300000")+
+      field("کف قیمت (تومان)","min","400000")+
+      field("سقف قیمت (تومان)","max","650000")+
+      field("قیمت رقیب (تومان، اختیاری)","competitor","")+
+      '<div class="field"><label for="strategy">استراتژی</label><select id="strategy">'+Object.entries(strategyNames).map(([v,n])=>'<option value="'+v+'">'+n+'</option>').join("")+'</select></div></div>'+
+      '<div class="modal-actions"><button class="btn btn-primary" id="save-product">ثبت در کاتالوگ آزمایشی</button></div><div id="form-error" class="error"></div>');
+    document.getElementById("save-product").addEventListener("click", async () => {
+      const val = id => document.getElementById(id).value.trim();
+      const competitor = val("competitor");
+      const payload = {sellerSku:val("sku"),title:val("title"),currentPriceToman:Number(val("current")),costPriceToman:Number(val("cost")),minPriceToman:Number(val("min")),maxPriceToman:Number(val("max")),competitorPriceToman:competitor===""?null:Number(competitor),strategy:val("strategy")};
+      try {
+        await api("/api/products",{method:"POST",body:JSON.stringify(payload)});
+        document.getElementById("modal").style.display="none";
+        await loadProducts();
+      } catch(e) { document.getElementById("form-error").textContent=e.message; }
+    });
+  });
+  document.getElementById("close-modal").addEventListener("click", () => document.getElementById("modal").style.display="none");
+  document.getElementById("modal").addEventListener("click", e => { if(e.target.id==="modal") e.currentTarget.style.display="none"; });
+  document.getElementById("refresh").addEventListener("click", loadProducts);
+  loadProducts();
+</script>
+</body>
+</html>
