@@ -30,7 +30,8 @@ app.MapPost("/api/products", (CreateProductRequest request, InMemoryCatalog cata
 {
     try
     {
-        return Results.Created("/api/products", catalog.Add(request));
+        var product = catalog.Add(request);
+        return Results.Created($"/api/products/{product.Id}", product);
     }
     catch (ArgumentException ex)
     {
@@ -40,14 +41,21 @@ app.MapPost("/api/products", (CreateProductRequest request, InMemoryCatalog cata
 
 app.MapPut("/api/products/{id:guid}/strategy", (Guid id, UpdateProductStrategyRequest request, InMemoryCatalog catalog) =>
 {
-    var updated = catalog.UpdateStrategy(id, request);
-    return updated is null
-        ? Results.NotFound(new { error = "کالا پیدا نشد." })
-        : Results.Ok(new
-        {
-            product = updated,
-            note = "این نسخه فقط تنظیم را ذخیره می‌کند؛ اجرای خودکار یا تغییر قیمت واقعی فعال نیست."
-        });
+    try
+    {
+        var updated = catalog.UpdateStrategy(id, request);
+        return updated is null
+            ? Results.NotFound(new { error = "کالا پیدا نشد." })
+            : Results.Ok(new
+            {
+                product = updated,
+                note = "این نسخه فقط تنظیم را ذخیره می‌کند؛ اجرای خودکار یا تغییر قیمت واقعی فعال نیست."
+            });
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
 });
 
 app.MapPost("/api/pricing/preview", (PricingPreviewRequest request, PricingEngine engine) =>
