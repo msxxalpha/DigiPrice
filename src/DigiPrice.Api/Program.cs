@@ -16,10 +16,14 @@ if (!string.IsNullOrWhiteSpace(sqlite.DataSource) &&
     !string.Equals(sqlite.DataSource, ":memory:", StringComparison.OrdinalIgnoreCase) &&
     !sqlite.DataSource.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
 {
-    var databaseDirectory = Path.GetDirectoryName(Path.GetFullPath(sqlite.DataSource));
+    if (!Path.IsPathRooted(sqlite.DataSource))
+        sqlite.DataSource = Path.GetFullPath(sqlite.DataSource, builder.Environment.ContentRootPath);
+
+    var databaseDirectory = Path.GetDirectoryName(sqlite.DataSource);
     if (!string.IsNullOrWhiteSpace(databaseDirectory))
         Directory.CreateDirectory(databaseDirectory);
 }
+connectionString = sqlite.ToString();
 
 builder.Services.AddDbContext<DigiPriceDbContext>(options => options.UseSqlite(connectionString));
 
@@ -62,7 +66,7 @@ app.MapGet("/api/products", async (DigiPriceDbContext db) =>
     return Results.Ok(products.Select(p => p.ToModel()).ToArray());
 });
 
-app.MapPost("/api/products", async (CreateProductRequest request, DigiPriceDbContext db) =>
+app.MapPost("/api/products", async Task<IResult> (CreateProductRequest request, DigiPriceDbContext db) =>
 {
     var error = ValidateProduct(request);
     if (error is not null)
@@ -101,7 +105,7 @@ app.MapPost("/api/products", async (CreateProductRequest request, DigiPriceDbCon
     return Results.Created($"/api/products/{product.Id}", product.ToModel());
 });
 
-app.MapPut("/api/products/{id:guid}/strategy", async (
+app.MapPut("/api/products/{id:guid}/strategy", async Task<IResult> (
     Guid id, UpdateProductStrategyRequest request, DigiPriceDbContext db) =>
 {
     if (!Enum.IsDefined(request.Strategy))
