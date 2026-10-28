@@ -49,7 +49,7 @@
   </section>
   <section class="panel">
     <div class="panel-head"><h2>کالاها و استراتژی قیمت‌گذاری</h2><button class="btn btn-light" id="refresh">به‌روزرسانی فهرست</button></div>
-    <div class="table-wrap"><table><thead><tr><th>کالا</th><th>قیمت فعلی</th><th>قیمت رقیب (نمونه)</th><th>کف قیمت</th><th>استراتژی</th><th>عملیات</th></tr></thead><tbody id="products"><tr><td colspan="6" class="empty">در حال دریافت اطلاعات…</td></tr></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>کالا</th><th>قیمت فعلی</th><th>قیمت رقیب (تومان)</th><th>کف قیمت</th><th>استراتژی</th><th>عملیات</th></tr></thead><tbody id="products"><tr><td colspan="6" class="empty">در حال دریافت اطلاعات…</td></tr></tbody></table></div>
   </section>
   <footer>DigiPrice · نسخه پایه · قیمت‌ها به تومان هستند · اتصال و اجرای زنده هنوز پیاده‌سازی نشده است.</footer>
 </main>
@@ -143,7 +143,7 @@
       field("سقف قیمت (تومان)","max","650000")+
       field("قیمت رقیب (تومان، اختیاری)","competitor","")+
       '<div class="field"><label for="strategy">استراتژی</label><select id="strategy">'+Object.entries(strategyNames).map(([v,n])=>'<option value="'+v+'">'+n+'</option>').join("")+'</select></div></div>'+
-      '<div class="modal-actions"><button class="btn btn-primary" id="save-product">ثبت در کاتالوگ آزمایشی</button></div><div id="form-error" class="error"></div>');
+      '<div class="modal-actions"><button class="btn btn-primary" id="save-product">ثبت کالا</button></div><div id="form-error" class="error"></div>');
     document.getElementById("save-product").addEventListener("click", async () => {
       const val = id => document.getElementById(id).value.trim();
       const competitor = val("competitor");
@@ -164,7 +164,7 @@
       const response = await fetch("/api/products/import", {method:"POST",headers:{"Content-Type":"text/csv; charset=utf-8"},body:await file.text()});
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "ورود فایل ناموفق بود.");
-      const details = (result.errors || []).slice(0,10).map(x => "سطر "+x.row+" ("+x.sku+"): "+x.error).join("\\n");
+      const details = (result.errors || []).slice(0,10).map(x => "سطر "+x.row+" ("+x.sku+"): "+x.error).join("\n");
       alert("ورود CSV پایان یافت.\\nکالای جدید: "+result.created+"\\nبه‌روزرسانی‌شده: "+result.updated+"\\nردشده: "+result.rejected+(details ? "\\n\\nجزئیات (حداکثر ۱۰ مورد):\\n"+details : ""));
       await loadProducts();
     } catch (e) { alert(e.message); }
