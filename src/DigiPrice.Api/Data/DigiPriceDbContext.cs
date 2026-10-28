@@ -12,13 +12,13 @@ public sealed class DigiPriceDbContext(DbContextOptions<DigiPriceDbContext> opti
         var product = modelBuilder.Entity<ProductEntity>();
         product.ToTable("Products", table =>
         {
-            table.HasCheckConstraint("CK_Products_CurrentPrice_Positive", "\"CurrentPriceToman\" > 0");
-            table.HasCheckConstraint("CK_Products_PriceBounds", "\"MinPriceToman\" > 0 AND \"MaxPriceToman\" >= \"MinPriceToman\"");
-            table.HasCheckConstraint("CK_Products_CurrentWithinBounds", "\"CurrentPriceToman\" >= \"MinPriceToman\" AND \"CurrentPriceToman\" <= \"MaxPriceToman\"");
-            table.HasCheckConstraint("CK_Products_Cost_NonNegative", "\"CostPriceToman\" >= 0");
+            table.HasCheckConstraint("CK_Products_CurrentPrice_Positive", "[CurrentPriceToman] > 0");
+            table.HasCheckConstraint("CK_Products_PriceBounds", "[MinPriceToman] > 0 AND [MaxPriceToman] >= [MinPriceToman]");
+            table.HasCheckConstraint("CK_Products_CurrentWithinBounds", "[CurrentPriceToman] >= [MinPriceToman] AND [CurrentPriceToman] <= [MaxPriceToman]");
+            table.HasCheckConstraint("CK_Products_Cost_NonNegative", "[CostPriceToman] >= 0");
         });
         product.HasKey(x => x.Id);
-        product.Property(x => x.SellerSku).HasMaxLength(100).UseCollation("NOCASE").IsRequired();
+        product.Property(x => x.SellerSku).HasMaxLength(100).UseCollation("Latin1_General_100_CI_AS").IsRequired();
         product.Property(x => x.Title).HasMaxLength(250).IsRequired();
         product.HasIndex(x => x.SellerSku).IsUnique();
         product.Property(x => x.Strategy).HasConversion<string>().HasMaxLength(64);
